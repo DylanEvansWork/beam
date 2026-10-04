@@ -40,20 +40,6 @@ export default function Receive({ onBack }: { onBack: () => void }) {
   const locked = !!last?.quad && now - L.lastLockAt < 1500
   const hint = phase === 'running' ? nudge(L, now) : null
 
-  if (phase === 'done' && L.result) {
-    const t0 = L.firstDataAt ?? startedAt
-    return (
-      <main className="screen">
-        <Result
-          meta={L.result.meta}
-          bytes={L.result.bytes}
-          seconds={((L.doneAt ?? now) - t0) / 1000}
-          onAgain={() => rx.reset()}
-        />
-      </main>
-    )
-  }
-
   const hist = L.bytesHist
   const speed = hist.length > 1 ? ((hist[hist.length - 1]!.bytes - hist[0]!.bytes) * 1000) / (hist[hist.length - 1]!.t - hist[0]!.t) : 0
   const good = L.hist.filter((s) => s === 'ok' || s === 'dup' || s === 'lockon').length
@@ -80,6 +66,40 @@ export default function Receive({ onBack }: { onBack: () => void }) {
     'fountain': p ? `${p.solved}/${p.K} (rx ${p.received})` : '-',
     overhead: p ? `${(p.overhead * 100).toFixed(0)}%` : '-',
     throughput: `${formatBytes(Math.round(speed))}/s`,
+  }
+
+  const hudEl = debug ? (
+    <Hud
+          title="Receiver"
+          lines={lines}
+          extra={() => ({
+            camera: rx.info,
+            counts: L.counts,
+            loop: rx.loopRef.current?.stats(),
+            lastReport: last && { ...last, progress: undefined },
+            progress: p && { ...p, meta: p.meta && { ...p.meta, sha256: undefined } },
+          })}
+          onSaveFrame={() => rx.loopRef.current?.snapshot() ?? Promise.resolve(null)}
+        />
+  ) : null
+
+  if (phase === 'done' && L.result) {
+    const t0 = L.firstDataAt ?? startedAt
+    return (
+      <main className="screen">
+        <Result
+          meta={L.result.meta}
+          bytes={L.result.bytes}
+          seconds={((L.doneAt ?? now) - t0) / 1000}
+          onAgain={() => rx.reset()}
+        />
+        <button className="link center" onClick={() => setDebug((d) => !d)}>
+          {debug ? 'Hide debug' : 'Debug'}
+        </button>
+        {debug && <div style={{ height: '44dvh' }} />}
+        {hudEl}
+      </main>
+    )
   }
 
   return (
@@ -167,20 +187,7 @@ export default function Receive({ onBack }: { onBack: () => void }) {
         </div>
       )}
 
-      {debug && (
-        <Hud
-          title="Receiver"
-          lines={lines}
-          extra={() => ({
-            camera: rx.info,
-            counts: L.counts,
-            loop: rx.loopRef.current?.stats(),
-            lastReport: last && { ...last, progress: undefined },
-            progress: p && { ...p, meta: p.meta && { ...p.meta, sha256: undefined } },
-          })}
-          onSaveFrame={() => rx.loopRef.current?.snapshot() ?? Promise.resolve(null)}
-        />
-      )}
+      {hudEl}
     </main>
   )
 }
