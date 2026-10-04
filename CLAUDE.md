@@ -18,13 +18,14 @@ Offline phone-to-phone data transfer: sender's screen shows a stream of colour-g
 - Frame: square grid of integer-pixel cells. Finder patterns (one distinguishable corner), alignment patterns, reference strip (every palette colour + black + white), pilot cells (~1 in 32), header (1 bit/cell, big cells) repeated top and bottom. Top/bottom header mismatch or CRC fail => discard the whole camera frame (tear/blend).
 - Header: magic/version 4b, tier 4b, session 16b, frame counter 16b, CRC8.
 - Data area = several independent packets per frame: `[type:1][session:2][symbolIndex:3][payload:N][crc16:2]` + RS over GF(256). Failed packet = erasure. Interleaving is a tunable, benchmarked in the simulator.
-- Fountain: systematic LT-style, robust soliton, neighbours derived from `(session, symbolIndex)` via seeded PRNG; peeling decoder + GF(2) Gaussian fallback.
-- META packet (version, session, tier, filename, mime, sizes, compression flag, K, symbol size, SHA-256) in every frame.
+- Fountain: LT with robust soliton (systematic only for K <= 40), neighbours derived from `(session, symbolIndex)` via seeded PRNG; peeling decoder + GF(2) Gaussian fallback. ~3-4% overhead for K >= 300.
+- META packet (version, session, tier, filename, mime, sizes, compression flag, K, symbol size, SHA-256) every 3rd frame (`metaEvery`).
 - Pipeline: bytes -> deflate-raw (skip if it grows) -> SHA-256 of original -> K symbols -> fountain -> packets+RS -> frames.
 - Tiers: safe (4 col), balanced (8, default), fast (16), max (experimental). All parametric in `profiles.ts`.
 
 ## Process
-- Work milestone by milestone (see README roadmap). After each: run tests, commit, summarise verified vs unverified, stop and wait for Dylan.
+- Dylan asked for the whole thing built in one go (overrides the original milestone-by-milestone plan). The original milestone list is in the README history; everything up to Link Test and PWA is built. Remaining work is the real-device tuning loop: Dylan sends HUD diagnostics (`?debug=1`, Copy diagnostics, Save a frame) and we tune thresholds/palettes/cell sizes in `profiles.ts`, `decoder.ts` options, `locate.ts`.
 - Log every non-obvious design decision in DECISIONS.md.
-- Commands: `npm run dev | build | test | lint | typecheck | format`. Slow benchmarks go behind `npm run bench` (once it exists).
+- Commands: `npm run dev | build | test | lint | typecheck | format | bench` (bench is slow, writes `bench/results.md`).
+- Layout: `src/engine` (codec), `src/receiver` (locate/sample/decode/assemble, worker, camera), `src/sender` (renderer, scheduler), `src/sim` (channel simulator + runner + loopback worker), `src/ui`, `src/debug`.
 - Tests live in `/tests`, import from `src/`.

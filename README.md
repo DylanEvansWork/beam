@@ -1,30 +1,53 @@
 # Beam
 
-Send text and files from one phone to another using only a screen and a camera. No wifi, no bluetooth, no internet, no server. Everything runs in the browser, and it works offline once loaded.
+Send text and files from one phone to another using only a screen and a camera. No wifi, no bluetooth, no internet, no server. Everything runs in the browser and works offline once loaded (install it to your Home Screen).
 
-Status: early development (milestone 1 of 9: scaffold). See `CLAUDE.md` for the design constraints and `DECISIONS.md` for why things are the way they are.
+How: the sender's screen plays a fast stream of colour-grid frames (a custom high-density barcode). The receiver's rear camera finds the screen, locks on, decodes the frames in a Web Worker and rebuilds the file. It's one-way and *rateless* (a fountain code), so the sender just loops and the receiver finishes whenever it has collected enough, even if it started late or missed frames. The result is SHA-256 verified before it's shown. Corrupted data is never presented as a file.
 
-## Roadmap
-1. Scaffold + deploy
-2. Engine core (GF256, Reed-Solomon, fountain code, packets)
-3. Framing + renderer
-4. Channel simulator + loopback decoder
-5. Browser camera pipeline
-6. Full app flow
-7. Real-device tuning
-8. Link Test mode
-9. Polish + offline hardening
+**Live:** https://dylanevanswork.github.io/beam/
+
+## Use it
+1. Both phones: open the site in Safari/Chrome, Share → Add to Home Screen.
+2. Sender: **Send** → text or a file/photo (up to 1 MB) → pick a speed → show the code.
+3. Receiver: **Receive** → point the back camera at the code from about 15 to 25 cm so it fills most of the view. When the frame turns green it's locked.
+4. Sender taps **Start**. The receiver shows progress and then the result. Tap **Stop** on the sender when done.
+
+Not sure which speed? Run **Link test** from the home screen: one phone plays test patterns at each speed for ~10 s, the other scores them and recommends one.
+
+### Before you start (sender)
+- Screen brightness all the way up
+- Turn off True Tone, Night Shift and auto-brightness (they change the colours)
+- Turn off Low Power Mode (it drops the screen to 30 Hz)
+- Hold steady, in decent light. Rotation and tilt are fine, motion blur isn't.
+
+## Honest limitations
+- This is a web app. Browser limits apply: iPhone Safari delivers at most 60 fps of camera video and caps `requestAnimationFrame` at 60 Hz, offers no manual exposure/focus, and its Low Power Mode drops to 30 Hz. A native app would be much faster.
+- Speeds below are **simulator** results (see the table). Real optics (moiré, glare, rolling shutter on a real sensor, real auto-exposure) will be worse, and the real-device tuning loop is still to do. The in-app readout is honest: it shows measured throughput, not the theoretical best case.
+- Max transfer is 1 MB. Photos from a phone camera are usually bigger, so resize first.
+- The camera loop (`src/receiver/camera.ts`) has only been exercised in tests and type-checking, never on a real phone camera yet. `Fast` and `Max` (16 colours, 80 and 96 cell grids) may not be readable on 1080p-class cameras; `Safe` and `Balanced` are the ones to try first.
+
+## Debugging on a phone
+Add `?debug=1` to the URL (or triple-tap the sender screen). You get a live HUD (camera size and measured fps, lock state, blur, pilot error rate, RS fixes, fountain progress, throughput). **Copy diagnostics** puts a JSON summary on the clipboard; **Save a frame** (receiver) saves the last camera frame as a PNG with the detected quad drawn on it. `?res=1920` raises the decode resolution from 1280 to 1920 px for sharper cells at more CPU.
 
 ## Develop
 ```bash
 npm install
 npm run dev        # local dev server
-npm test           # unit tests
+npm test           # unit + simulated end-to-end tests (~10 s)
+npm run bench      # slow: tier benchmark through the channel simulator -> bench/results.md
 npm run build      # static build to dist/
 ```
+The `/#/loopback` page runs sender → simulated screen-to-camera channel → decoder entirely on one device, no second phone needed.
+
+### Layout
+- `src/engine`: pure TS codec (GF(256), Reed-Solomon, LT fountain, packets, framing, session). No DOM.
+- `src/receiver`: locator, homography, cell sampler, per-frame colour model, frame decoder, assembler, Web Worker, camera loop.
+- `src/sender`: integer-pixel renderer, refresh-rate measurement, wake lock.
+- `src/sim`: seeded channel simulator (perspective, blur, colour cast, exposure drift, vignette/glare, noise, 4:2:0 chroma, rolling-shutter tear), transfer runner, loopback worker.
+- `DECISIONS.md` explains every non-obvious design call and where it deviates from the original spec. `CLAUDE.md` holds the constraints.
 
 ## Deploy
-Static Vite project: import the GitHub repo into Vercel, build command `npm run build`, output `dist`. No special headers needed.
+Static Vite project. Hosted on GitHub Pages by `.github/workflows/pages.yml` (builds with `BEAM_BASE=/beam/`). On Vercel/Netlify or any root host, build with `npm run build` (output `dist`) and no base. No special headers needed (no SharedArrayBuffer).
 
-## Install on a phone
-Open the site in Safari, tap Share, then Add to Home Screen. After the first load it works in airplane mode.
+## Simulator benchmark
+See `bench/results.md` (generated by `npm run bench`).

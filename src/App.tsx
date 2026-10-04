@@ -1,28 +1,42 @@
 import { useEffect, useState } from 'react'
 import { registerSW } from 'virtual:pwa-register'
+import LinkTest from './ui/LinkTest'
+import Loopback from './ui/Loopback'
+import Receive from './ui/Receive'
+import Send from './ui/Send'
 
-type Screen = 'home' | 'send' | 'receive'
+type Route = 'home' | 'send' | 'receive' | 'linktest' | 'loopback'
+
+const parse = (): Route => {
+  const h = location.hash.replace(/^#\/?/, '')
+  return (['send', 'receive', 'linktest', 'loopback'] as const).find((r) => r === h) ?? 'home'
+}
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('home')
+  const [route, setRoute] = useState<Route>(parse())
   const [offlineReady, setOfflineReady] = useState(false)
+  const [updateReady, setUpdateReady] = useState<null | (() => void)>(null)
   const [showHow, setShowHow] = useState(false)
 
   useEffect(() => {
-    registerSW({ onOfflineReady: () => setOfflineReady(true) })
+    const onHash = () => setRoute(parse())
+    window.addEventListener('hashchange', onHash)
+    const update = registerSW({
+      onOfflineReady: () => setOfflineReady(true),
+      onNeedRefresh: () => setUpdateReady(() => () => void update(true)),
+    })
+    return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  if (screen !== 'home') {
-    return (
-      <main className="screen">
-        <button className="back" onClick={() => setScreen('home')}>
-          ← Back
-        </button>
-        <h1>{screen === 'send' ? 'Send' : 'Receive'}</h1>
-        <p className="muted">Coming soon. This is the scaffold.</p>
-      </main>
-    )
+  const go = (r: Route) => {
+    location.hash = r === 'home' ? '' : `/${r}`
+    setRoute(r)
   }
+
+  if (route === 'send') return <Send onBack={() => go('home')} />
+  if (route === 'receive') return <Receive onBack={() => go('home')} />
+  if (route === 'linktest') return <LinkTest onBack={() => go('home')} />
+  if (route === 'loopback') return <Loopback onBack={() => go('home')} />
 
   return (
     <main className="screen home">
@@ -35,20 +49,31 @@ export default function App() {
       </header>
 
       <div className="actions">
-        <button className="big send" onClick={() => setScreen('send')}>
+        <button className="big send" onClick={() => go('send')}>
           Send
         </button>
-        <button className="big receive" onClick={() => setScreen('receive')}>
+        <button className="big receive" onClick={() => go('receive')}>
           Receive
         </button>
+        <div className="row center">
+          <button className="link" onClick={() => go('linktest')}>
+            Link test
+          </button>
+          <button className="link" onClick={() => go('loopback')}>
+            Loopback demo
+          </button>
+        </div>
       </div>
 
       <footer>
-        <p className="muted">
-          100% on your device. No servers, no tracking, no network after load.
-        </p>
+        <p className="muted">100% on your device. No servers, no tracking, no network after load.</p>
         <div className="row">
           {offlineReady && <span className="badge">Works offline</span>}
+          {updateReady && (
+            <button className="link" onClick={updateReady}>
+              Update available: reload
+            </button>
+          )}
           <button className="link" onClick={() => setShowHow(true)}>
             How it works
           </button>
@@ -60,9 +85,9 @@ export default function App() {
           <div className="sheet" onClick={(e) => e.stopPropagation()}>
             <h2>How it works</h2>
             <ol>
-              <li>The sender phone's screen plays a fast stream of coloured patterns.</li>
-              <li>The receiver phone's camera watches them and rebuilds the data.</li>
-              <li>No wifi, bluetooth or internet needed. Just line the phones up.</li>
+              <li>The sender's screen plays a fast stream of coloured patterns.</li>
+              <li>The receiver's camera watches them and rebuilds the file.</li>
+              <li>No wifi, bluetooth or internet. Just line the phones up.</li>
             </ol>
             <button className="big" onClick={() => setShowHow(false)}>
               Got it

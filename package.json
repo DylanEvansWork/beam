@@ -11,7 +11,8 @@
     "test": "vitest run",
     "format": "prettier --write .",
     "typecheck": "tsc -b",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "bench": "vitest run --config vitest.bench.config.ts"
   },
   "dependencies": {
     "react": "^19.2.8",
