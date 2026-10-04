@@ -58,8 +58,10 @@ export default function SenderView({ mode, onExit }: { mode: SenderMode; onExit:
       const profile = mode.prepared.profile
       provider = (counter) => ({ cells: source!.frame(counter), layout: source!.layout, hold: scaleHold(profile.hold) })
     }
+    // the lock-on screen has a hint above and buttons below the code: reserve room so they never cover cells
+    const reserve = mode.kind === 'transfer' && phase === 'lockon' ? 340 : 0
     const r = new SenderRunner(canvasRef.current, provider, refresh.intervalMs, () => ({
-      w: window.innerWidth, h: window.innerHeight, dpr: window.devicePixelRatio || 1,
+      w: window.innerWidth, h: Math.max(240, window.innerHeight - reserve), dpr: window.devicePixelRatio || 1,
     }))
     r.onStats = (s) => {
       if (++frames.current % 8 === 0) setStats(s)

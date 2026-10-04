@@ -174,7 +174,11 @@ export class CameraLoop {
     )
   }
 
+  /** Last stats before stop(), so diagnostics taken after a finished transfer aren't all zeros. */
+  private frozen: LoopStats | null = null
+
   stats(): LoopStats {
+    if (this.frozen) return this.frozen
     const now = performance.now()
     const rate = (a: number[]) => {
       while (a.length && now - a[0]! > 2000) a.shift()
@@ -216,6 +220,7 @@ export class CameraLoop {
   }
 
   stop(): void {
+    if (this.running) this.frozen = this.stats()
     this.running = false
     const v = this.video
     if (v?.cancelVideoFrameCallback) v.cancelVideoFrameCallback(this.cbHandle)
