@@ -103,3 +103,12 @@ describe('session end-to-end on clean frames', () => {
     console.log(rows.join('\n'))
   })
 })
+
+describe('text with emoji and non-latin scripts', () => {
+  it('survives the whole pipeline byte for byte', async () => {
+    const text = 'Hey 👋 café ☕ 日本語 🇬🇧 👨‍👩‍👧‍👦 ❤️ “quotes” — done ✅'
+    const bytes = new TextEncoder().encode(text)
+    const { out } = await transfer(bytes, 1, 0, 0)
+    expect(new TextDecoder().decode(out)).toBe(text)
+  })
+})

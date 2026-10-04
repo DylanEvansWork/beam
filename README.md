@@ -23,7 +23,7 @@ Not sure which speed? Run **Link test** from the home screen: one phone plays te
 ## Honest limitations
 - This is a web app. Browser limits apply: iPhone Safari delivers at most 60 fps of camera video and caps `requestAnimationFrame` at 60 Hz, offers no manual exposure/focus, and its Low Power Mode drops to 30 Hz. A native app would be much faster.
 - Speeds below are **simulator** results (see the table). Real optics (moiré, glare, rolling shutter on a real sensor, real auto-exposure) will be worse, and the real-device tuning loop is still to do. The in-app readout is honest: it shows measured throughput, not the theoretical best case.
-- Max transfer is 1 MB. Photos from a phone camera are usually bigger, so resize first.
+- Max transfer is 1 MB. Photos are re-encoded as JPEG about 5x smaller by default (a "Compact photo" toggle on the send screen; it's lossy, and the copy that gets saved is the smaller one). Turn it off to send the original byte for byte, but then it has to be under 1 MB.
 - The camera loop (`src/receiver/camera.ts`) has only been exercised in tests and type-checking, never on a real phone camera yet. `Fast` and `Max` (16 colours, 80 and 96 cell grids) may not be readable on 1080p-class cameras; `Safe` and `Balanced` are the ones to try first.
 
 ## Debugging on a phone

@@ -76,8 +76,11 @@ export function Result({ meta, bytes, seconds, onAgain }: Props) {
           </button>
         )}
         <button className="big" onClick={share}>
-          {mime.startsWith('image/') ? 'Save / Share' : 'Save file'}
+          {mime.startsWith('image/') ? 'Save to camera roll' : 'Save file'}
         </button>
+        {mime.startsWith('image/') && (
+          <p className="muted center">Tap Save Image in the sheet that opens. (Web apps can't write to Photos directly.)</p>
+        )}
         {url && (
           <a className="link center" href={url} download={meta.name || 'beam-file'}>
             Download link

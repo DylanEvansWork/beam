@@ -25,6 +25,9 @@
 - **Receiver geometry:** coarse run-length finder scan on a decimated copy, then per-anchor template matching (a sampled 7x7 / 5x5 pattern correlated over a small search window), then a two-pass homography fit with outlier rejection. Tracking reuses the previous homography to predict every anchor and only falls back to a full scan if too few anchors match.
 - **Decoding frame size capped at 1280 px long side** (`?res=1920` to raise). Frames are grabbed on the main thread (`drawImage` + `getImageData`) and transferred to the worker, not `ImageBitmap`/`OffscreenCanvas`: one code path that works on every Safari. Frames are only grabbed when the worker is idle.
 
+- **Photo compaction (lossy, ~5x, default on for images).** `src/sender/compactPhoto.ts` re-encodes via canvas to JPEG, keeping the highest resolution it can at quality >= 0.6 (binary search on quality, shrinking pixels in 0.85x steps only when needed), capped at 1 MB. Toggle off for byte-exact sends. Falls back to the original if the browser can't decode the image. "Save to camera roll" uses the Web Share sheet (Save Image), because web apps can't write to Photos directly.
+- **Emoji / any Unicode text** is plain UTF-8 end to end (tested with flags and ZWJ sequences).
+
 ## Not built
 - **QR handshake on the lock-on screen**, **DeviceMotion prediction**, **manual exposure/focus controls beyond continuous autofocus + torch**: all marked optional in the spec. Exposure/white-balance drift is handled in software by the per-frame colour model.
 - **Playwright e2e with Chrome fake camera**: optional in the spec. The simulator end-to-end tests plus the real-browser worker check cover the pipeline; the actual camera grab loop (`src/receiver/camera.ts`) is only verified by type-checking until it's run on real phones.
