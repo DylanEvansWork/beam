@@ -9,6 +9,7 @@ export function buildDiagnostics(title: string, lines: HudLines, extra?: () => R
   return JSON.stringify(
     {
       app: 'beam',
+      build: __BUILD_ID__,
       screen: title,
       time: new Date().toISOString(),
       ua: navigator.userAgent,

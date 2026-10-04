@@ -12,6 +12,19 @@ const parse = (): Route => {
   return (['send', 'receive', 'linktest', 'loopback'] as const).find((r) => r === h) ?? 'home'
 }
 
+/** Drop the service worker and every cache, then reload: guarantees the newest build from the network. */
+async function forceUpdate() {
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations()
+    await Promise.all(regs.map((r) => r.unregister()))
+    const keys = await caches.keys()
+    await Promise.all(keys.map((k) => caches.delete(k)))
+  } catch {
+    /* reload anyway */
+  }
+  location.reload()
+}
+
 export default function App() {
   const [route, setRoute] = useState<Route>(parse())
   const [offlineReady, setOfflineReady] = useState(false)
@@ -21,11 +34,25 @@ export default function App() {
   useEffect(() => {
     const onHash = () => setRoute(parse())
     window.addEventListener('hashchange', onHash)
+    let timer = 0
+    const check = (r?: ServiceWorkerRegistration) => void r?.update().catch(() => {})
+    let reg: ServiceWorkerRegistration | undefined
     const update = registerSW({
       onOfflineReady: () => setOfflineReady(true),
       onNeedRefresh: () => setUpdateReady(() => () => void update(true)),
+      onRegisteredSW: (_url, r) => {
+        reg = r
+        check(r)
+        timer = window.setInterval(() => check(r), 60_000)
+      },
     })
-    return () => window.removeEventListener('hashchange', onHash)
+    const onVis = () => document.visibilityState === 'visible' && check(reg)
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      window.removeEventListener('hashchange', onHash)
+      document.removeEventListener('visibilitychange', onVis)
+      clearInterval(timer)
+    }
   }, [])
 
   const go = (r: Route) => {
@@ -76,6 +103,12 @@ export default function App() {
           )}
           <button className="link" onClick={() => setShowHow(true)}>
             How it works
+          </button>
+        </div>
+        <div className="row">
+          <span className="build">build {__BUILD_ID__}</span>
+          <button className="link small" onClick={forceUpdate}>
+            Force update
           </button>
         </div>
       </footer>

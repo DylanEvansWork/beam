@@ -1,10 +1,21 @@
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { execSync } from 'node:child_process'
 import { defineConfig } from 'vitest/config'
+
+const sha = (() => {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim()
+  } catch {
+    return 'dev'
+  }
+})()
+const BUILD_ID = `${sha} ${new Date().toISOString().slice(5, 16).replace('T', ' ')}`
 
 // Set BEAM_BASE=/beam/ for GitHub Pages project sites; Vercel/root hosting uses '/'.
 export default defineConfig({
   base: process.env.BEAM_BASE ?? '/',
+  define: { __BUILD_ID__: JSON.stringify(BUILD_ID) },
   plugins: [
     react(),
     VitePWA({
