@@ -178,7 +178,7 @@ export default function Receive({ onBack }: { onBack: () => void }) {
             lastReport: last && { ...last, progress: undefined },
             progress: p && { ...p, meta: p.meta && { ...p.meta, sha256: undefined } },
           })}
-          onSaveFrame={() => rx.loopRef.current?.snapshot(last?.quad ?? null) ?? Promise.resolve(null)}
+          onSaveFrame={() => rx.loopRef.current?.snapshot() ?? Promise.resolve(null)}
         />
       )}
     </main>

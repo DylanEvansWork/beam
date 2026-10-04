@@ -58,7 +58,7 @@ export class CameraLoop {
   private captureMs = 0
   private sentW = 0
   private sentH = 0
-  private lastFrame: { data: Uint8ClampedArray; w: number; h: number } | null = null
+  private lastFrame: { data: Uint8ClampedArray; w: number; h: number; id: number; quad: [number, number][] | null } | null = null
   info: CameraInfo | null = null
   onReport?: (r: ReportMsg) => void
   onResult?: (r: ResultMsg) => void
@@ -120,6 +120,7 @@ export class CameraLoop {
       this.busy = false
       this.finished.push(performance.now())
       this.decodeMs = this.decodeMs * 0.9 + m.ms * 0.1
+      if (this.lastFrame && this.lastFrame.id === m.id) this.lastFrame.quad = m.quad
       this.onReport?.(m)
     } else if (m.type === 'result') this.onResult?.(m)
     else this.onError?.(m.message)
@@ -166,7 +167,7 @@ export class CameraLoop {
     this.grabbed++
     this.busy = true
     // keep a copy for "Save a frame" only occasionally; the live buffer is transferred, not copied
-    if (this.grabbed % 12 === 1) this.lastFrame = { data: new Uint8ClampedArray(img.data), w, h }
+    if (this.grabbed % 12 === 1) this.lastFrame = { data: new Uint8ClampedArray(img.data), w, h, id: this.id + 1, quad: null }
     this.worker!.postMessage(
       { type: 'frame', id: ++this.id, width: w, height: h, buffer: img.data.buffer } satisfies WorkerIn,
       [img.data.buffer],
@@ -194,9 +195,10 @@ export class CameraLoop {
   }
 
   /** PNG of the last frame sent to the worker, with the detected quad drawn on it. */
-  async snapshot(quad: [number, number][] | null): Promise<Blob | null> {
+  async snapshot(): Promise<Blob | null> {
     const f = this.lastFrame
     if (!f) return null
+    const quad = f.quad
     const c = document.createElement('canvas')
     c.width = f.w
     c.height = f.h
