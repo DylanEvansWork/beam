@@ -26,8 +26,10 @@ function rand(n: number, seed: number) {
 it('tier benchmark', async () => {
   const presets: PresetName[] = quick ? ['moderate'] : ['easy', 'moderate', 'harsh']
   const trials = 1
-  writeFileSync(OUT, `# Simulator benchmark\n\n~6 s of best-case stream per run (payload size varies by tier, shown in the table), 60 Hz display, simulated camera. Goodput = payload bytes / simulated seconds until hash-verified. \`ok\` = successful trials / trials.\n\n| tier | payload | channel | cam fps | ok | goodput KB/s (mean) | seconds (mean) | RS fixes | rejected frames (tear/blur/bad) |\n|---|---|---|---|---|---|---|---|---|\n`)
+  if (!process.env.BEAM_APPEND) writeFileSync(OUT, `# Simulator benchmark\n\n~6 s of best-case stream per run (payload size varies by tier, shown in the table), 60 Hz display, simulated camera. Goodput = payload bytes / simulated seconds until hash-verified. \`ok\` = successful trials / trials.\n\n| tier | payload | channel | cam fps | ok | goodput KB/s (mean) | seconds (mean) | RS fixes | rejected frames (tear/blur/bad) |\n|---|---|---|---|---|---|---|---|---|\n`)
+  const only = process.env.BEAM_TIERS?.split(',').map(Number)
   for (const profile of PROFILES) {
+    if (only && !only.includes(profile.id)) continue
     for (const preset of presets) {
       for (const fps of preset === 'easy' ? [60] : [60, 30]) {
         if (quick && fps === 30) continue
@@ -38,7 +40,7 @@ it('tier benchmark', async () => {
         let rej = 0
         let total = 0
         for (let t = 0; t < trials; t++) {
-          const r = await runTransfer({ profile, bytes: rand(sizeFor(profile), 10 + t), preset, camFps: fps, seed: 20 + t, startCounter: t * 7, maxSeconds: 90 })
+          const r = await runTransfer({ profile, bytes: rand(sizeFor(profile), 10 + t), preset, camFps: fps, seed: 20 + t, startCounter: t * 7, maxSeconds: 20 })
           if (r.ok) okN++
           gp += r.goodputBps
           secs += r.seconds
@@ -66,7 +68,7 @@ it('interleave / erasure comparison (balanced, harsh)', async () => {
       let okN = 0
       const trials = quick ? 1 : 3
       for (let t = 0; t < trials; t++) {
-        const r = await runTransfer({ profile: p, bytes: rand(SIZE, 50 + t), preset: 'harsh', seed: 70 + t, maxSeconds: 90, decoderOptions: { erasureConf } })
+        const r = await runTransfer({ profile: p, bytes: rand(SIZE, 50 + t), preset: 'harsh', seed: 70 + t, maxSeconds: 20, decoderOptions: { erasureConf } })
         secs += r.seconds
         if (r.ok) okN++
       }
