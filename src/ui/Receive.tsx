@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Hud, debugFromUrl, type HudLines } from '../debug/Hud'
+import { Hud, buildDiagnostics, debugFromUrl, type HudLines } from '../debug/Hud'
 import { formatBytes, formatSeconds } from './format'
 import { Result } from './Result'
 import { nudge, tierName, useReceiver } from './useReceiver'
@@ -68,17 +68,20 @@ export default function Receive({ onBack }: { onBack: () => void }) {
     throughput: `${formatBytes(Math.round(speed))}/s`,
   }
 
+  const extraDiag = () => ({
+    camera: rx.info,
+    counts: L.counts,
+    loop: rx.loopRef.current?.stats(),
+    lastReport: last && { ...last, progress: undefined },
+    progress: p && { ...p, meta: p.meta && { ...p.meta, sha256: undefined } },
+    result: L.result && { name: L.result.meta.name, mime: L.result.meta.mime, bytes: L.result.bytes.length, K: L.result.meta.K, tier: tierName(L.result.meta.tier), seconds: (((L.doneAt ?? now) - (L.firstDataAt ?? startedAt)) / 1000).toFixed(2) },
+  })
+
   const hudEl = debug ? (
     <Hud
           title="Receiver"
           lines={lines}
-          extra={() => ({
-            camera: rx.info,
-            counts: L.counts,
-            loop: rx.loopRef.current?.stats(),
-            lastReport: last && { ...last, progress: undefined },
-            progress: p && { ...p, meta: p.meta && { ...p.meta, sha256: undefined } },
-          })}
+          extra={extraDiag}
           onSaveFrame={() => rx.loopRef.current?.snapshot() ?? Promise.resolve(null)}
         />
   ) : null
@@ -92,6 +95,7 @@ export default function Receive({ onBack }: { onBack: () => void }) {
           bytes={L.result.bytes}
           seconds={((L.doneAt ?? now) - t0) / 1000}
           onAgain={() => rx.reset()}
+          onDiag={() => buildDiagnostics('Receiver (result)', lines, extraDiag)}
         />
         <button className="link center" onClick={() => setDebug((d) => !d)}>
           {debug ? 'Hide debug' : 'Debug'}

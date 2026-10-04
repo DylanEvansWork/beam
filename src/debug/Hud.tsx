@@ -4,6 +4,24 @@ export type HudLines = Record<string, string | number | boolean | null | undefin
 
 export const debugFromUrl = (): boolean => new URLSearchParams(location.search).has('debug')
 
+/** Compact JSON summary of a screen's debug state, for pasting back for tuning. */
+export function buildDiagnostics(title: string, lines: HudLines, extra?: () => Record<string, unknown>): string {
+  return JSON.stringify(
+    {
+      app: 'beam',
+      screen: title,
+      time: new Date().toISOString(),
+      ua: navigator.userAgent,
+      dpr: window.devicePixelRatio,
+      viewport: [window.innerWidth, window.innerHeight],
+      lines,
+      ...(extra ? extra() : {}),
+    },
+    (_k, v) => (v instanceof Uint8Array ? `[${v.length} bytes]` : v),
+    2,
+  )
+}
+
 interface Props {
   title: string
   lines: HudLines
@@ -16,21 +34,7 @@ interface Props {
 export function Hud({ title, lines, extra, onSaveFrame }: Props) {
   const [note, setNote] = useState('')
 
-  const diagnostics = () =>
-    JSON.stringify(
-      {
-        app: 'beam',
-        screen: title,
-        time: new Date().toISOString(),
-        ua: navigator.userAgent,
-        dpr: window.devicePixelRatio,
-        viewport: [window.innerWidth, window.innerHeight],
-        lines,
-        ...(extra ? extra() : {}),
-      },
-      (_k, v) => (v instanceof Uint8Array ? `[${v.length} bytes]` : v),
-      2,
-    )
+  const diagnostics = () => buildDiagnostics(title, lines, extra)
 
   const copy = async () => {
     try {

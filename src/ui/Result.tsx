@@ -7,13 +7,17 @@ interface Props {
   bytes: Uint8Array
   seconds: number
   onAgain: () => void
+  /** Returns diagnostics JSON text; shown as a Copy diagnostics button when provided. */
+  onDiag?: () => string
 }
 
-export function Result({ meta, bytes, seconds, onAgain }: Props) {
+export function Result({ meta, bytes, seconds, onAgain, onDiag }: Props) {
   const mime = meta.mime || 'application/octet-stream'
   const blob = useMemo(() => new Blob([bytes as BlobPart], { type: mime }), [bytes, mime])
   const [url, setUrl] = useState('')
   const [copied, setCopied] = useState(false)
+  const [diagNote, setDiagNote] = useState('')
+  const [diagText, setDiagText] = useState('')
   const text = useMemo(() => (isTextLike(mime, meta.name) ? new TextDecoder().decode(bytes) : null), [bytes, mime, meta.name])
 
   useEffect(() => {
@@ -47,6 +51,18 @@ export function Result({ meta, bytes, seconds, onAgain }: Props) {
       setTimeout(() => setCopied(false), 2000)
     } catch {
       /* ignore */
+    }
+  }
+
+  const copyDiag = async () => {
+    const text = onDiag!()
+    try {
+      await navigator.clipboard.writeText(text)
+      setDiagNote('Copied. Paste it into a message.')
+      setDiagText('')
+    } catch {
+      setDiagNote('Copy was blocked. Long-press the text below, Select All, Copy.')
+      setDiagText(text)
     }
   }
 
@@ -86,6 +102,13 @@ export function Result({ meta, bytes, seconds, onAgain }: Props) {
             Download link
           </a>
         )}
+        {onDiag && (
+          <button className="big" onClick={copyDiag}>
+            Copy diagnostics
+          </button>
+        )}
+        {diagNote && <p className="muted center">{diagNote}</p>}
+        {diagText && <textarea className="input" rows={6} readOnly value={diagText} onFocus={(e) => e.currentTarget.select()} />}
         <button className="big receive" onClick={onAgain}>
           Receive another
         </button>
