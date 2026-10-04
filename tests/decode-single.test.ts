@@ -33,3 +33,29 @@ describe('single frame through the simulated channel', () => {
     }
   }
 })
+
+describe('torn and half-corrupted headers', () => {
+  it('a camera frame torn between two display frames still yields packets', async () => {
+    const profile = PROFILES[1]!
+    const bytes = new Uint8Array(6000).map((_, i) => (i * 17 + 3) & 255)
+    const prepared = await prepareTransfer({ bytes, name: 'a.bin', mime: 'application/octet-stream' }, profile, 2024)
+    const src = new FrameSource(prepared)
+    const layout = buildLayout(profile)
+    const A = rasterize(layout, src.frame(10), 10)
+    const B = rasterize(layout, src.frame(11), 10)
+    const a = new Int16Array(720)
+    const b = new Int16Array(720).fill(-1)
+    const alpha = new Float32Array(720)
+    for (let y = 0; y < 720; y++) a[y] = y < 380 ? 0 : 1 // tear partway down the screen
+    const cam = renderCamera([A, B], { a, b, alpha }, makeParams('easy', {}, 10, 8), new Rng(3), new ChannelState())
+    const dec = new FrameDecoder()
+    // establish the session with a clean frame first (a lone valid header is only trusted for a known session)
+    const clean = renderCamera([A], { a: new Int16Array(720), b: new Int16Array(720).fill(-1), alpha: new Float32Array(720) }, makeParams('easy', {}, 10, 8), new Rng(4), new ChannelState())
+    expect(dec.process(clean).status).toBe('ok')
+    const r = dec.process(cam)
+    expect(r.status).toBe('tear')
+    expect(r.packets.length).toBeGreaterThanOrEqual(1)
+    expect(r.packets.length).toBeLessThan(layout.packetsPerFrame + 1)
+    console.log('torn frame: packets decoded', r.packets.length, 'of', layout.packetsPerFrame, 'symbol indices', r.packets.map((p) => p.index).join(','), 'fixes', r.packets.map((p) => p.corrected).join(','))
+  }, 60_000)
+})

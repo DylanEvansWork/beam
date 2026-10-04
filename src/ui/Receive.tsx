@@ -42,7 +42,7 @@ export default function Receive({ onBack }: { onBack: () => void }) {
 
   const hist = L.bytesHist
   const speed = hist.length > 1 ? ((hist[hist.length - 1]!.bytes - hist[0]!.bytes) * 1000) / (hist[hist.length - 1]!.t - hist[0]!.t) : 0
-  const good = L.hist.filter((s) => s === 'ok' || s === 'dup' || s === 'lockon').length
+  const good = L.hist.filter((s) => s === 'ok' || s === 'dup' || s === 'lockon' || s === 'tear').length
   const lines: HudLines = {
     lock: locked ? `${last?.mode} ${last?.anchors}` : 'searching',
     status: last?.status,

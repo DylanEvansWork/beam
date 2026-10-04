@@ -55,6 +55,7 @@ export class FrameDecoder {
   private done = new Set<string>()
   private doneOrder: string[] = []
   private headerMisses = 0
+  private lastSession = -1
 
   constructor(opts: Partial<DecoderOptions> = {}) {
     this.opts = { ...DEFAULT_OPTIONS, ...opts }
@@ -62,6 +63,7 @@ export class FrameDecoder {
 
   /** Forget which frames were fully decoded (e.g. when the session changes). */
   resetSeen(): void {
+    this.lastSession = -1
     this.done.clear()
     this.doneOrder = []
   }
@@ -100,26 +102,42 @@ export class FrameDecoder {
     report.stats.refSep = model.refSep
     report.stats.rms = model.rms
 
-    // header: both copies must pass CRC and agree, otherwise the camera caught a tear or blend
+    // Header: both copies agreeing is the clean case. Otherwise the camera caught a tear (two valid headers
+    // from consecutive display frames) or a header bit got corrupted (only one copy passes CRC). Both are
+    // still decodable: packets carry their own RS + CRC16 and the whitening doesn't depend on the counter.
+    // A lone valid header is trusted only if it matches the session we last saw cleanly, since an 8-bit CRC
+    // alone would let random garbage reset a transfer.
     const top = bitsToHeader(readHeaderBits(layout, model, rgb, layout.headerTop))
     const bot = bitsToHeader(readHeaderBits(layout, model, rgb, layout.headerBottom))
-    if (!top && !bot) {
+    let header: FrameHeader | null = null
+    let torn = false
+    if (top && bot && top.counter === bot.counter && top.session === bot.session && top.tierKind === bot.tierKind) {
+      header = top
+      this.lastSession = top.session
+    } else if (top && bot) {
+      if (top.session === bot.session && top.tierKind === bot.tierKind) {
+        header = top
+        torn = true
+      }
+    } else if (top || bot) {
+      const h = (top ?? bot)!
+      if (h.session === this.lastSession) {
+        header = h
+        torn = true
+      }
+    }
+    if (!header) {
       if (++this.headerMisses >= 2) this.locator.forget()
       return finish('badheader')
     }
     this.headerMisses = 0
-    if (!top || !bot || top.counter !== bot.counter || top.session !== bot.session || top.tierKind !== bot.tierKind) {
-      this.locator.accept(lock, layout)
-      return finish('tear')
-    }
-    const header = top
     report.header = header
     this.locator.accept(lock, layout)
     if (tierOf(header.tierKind) !== PROFILES.find((p) => p.grid === lock.G)?.id) return finish('badheader')
     if (kindOf(header.tierKind) === KIND_LOCKON) return finish('lockon')
 
     const key = `${header.session}:${header.counter}`
-    if (this.done.has(key)) return finish('dup')
+    if (!torn && this.done.has(key)) return finish('dup')
 
     const sharp = sharpness(layout, model, rgb)
     report.stats.sharpness = sharp
@@ -167,7 +185,7 @@ export class FrameDecoder {
         ok++
       } else report.packetsFailed++
     }
-    if (ok === ppf) this.markDone(key)
-    return finish('ok')
+    if (!torn && ok === ppf) this.markDone(key)
+    return finish(torn ? 'tear' : 'ok')
   }
 }

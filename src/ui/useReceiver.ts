@@ -68,7 +68,7 @@ export function useReceiver() {
     ctx.clearRect(0, 0, w, h)
     if (!r.quad || !st.sentW) return
     const k = w / st.sentW
-    const good = r.status === 'ok' || r.status === 'dup' || r.status === 'lockon'
+    const good = r.status === 'ok' || r.status === 'dup' || r.status === 'lockon' || r.status === 'tear'
     ctx.lineWidth = 4
     ctx.strokeStyle = good ? '#34c759' : '#ffcc00'
     ctx.beginPath()
@@ -98,7 +98,7 @@ export function useReceiver() {
       if (r.progress.bytesIn > 0 && L.firstDataAt === null) L.firstDataAt = now
       L.bytesHist.push({ t: now, bytes: r.progress.bytesIn })
       while (L.bytesHist.length > 2 && now - L.bytesHist[0]!.t > 4000) L.bytesHist.shift()
-      if (r.isTest && r.header && r.status === 'ok') {
+      if (r.isTest && r.header && (r.status === 'ok' || r.status === 'tear')) {
         const t = (L.tiers[r.header.tier] ??= { okFrames: 0, okPackets: 0, failedPackets: 0, minCounter: r.header.counter, maxCounter: r.header.counter })
         t.okFrames++
         t.okPackets += r.packetsOk

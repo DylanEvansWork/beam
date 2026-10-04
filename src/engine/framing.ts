@@ -255,9 +255,13 @@ export function bitsToHeader(bits: ArrayLike<number>): FrameHeader | null {
 
 // ---- bytes <-> cells -------------------------------------------------------------------------------------
 
-/** Whitening stream, so frames never contain long runs of one colour and padding is balanced. */
-export function whitening(session: number, counter: number, len: number): Uint8Array {
-  const rng = new Rng((session << 16) ^ 0x5a5a1234, counter)
+/**
+ * Whitening stream, so frames never contain long runs of one colour and padding is balanced. Deliberately
+ * independent of the frame counter: a camera frame torn between two display frames then still decodes
+ * packet by packet (each packet is RS + CRC16 protected on its own).
+ */
+export function whitening(session: number, _counter: number, len: number): Uint8Array {
+  const rng = new Rng((session << 16) ^ 0x5a5a1234, 0)
   const out = new Uint8Array(len)
   for (let i = 0; i < len; i++) out[i] = rng.nextU32() & 0xff
   return out

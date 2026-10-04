@@ -15,7 +15,10 @@ export interface Profile {
   packetsPerFrame: number
   /** RS parity as a fraction of the codeword. */
   parityRatio: number
-  /** Byte-interleave packets across the frame so localised damage spreads over all packets. */
+  /**
+   * Byte-interleave packets across the frame so localised damage spreads over all packets. Off by default:
+   * real cameras tear frames often, and contiguous packets let the intact ones survive a tear.
+   */
   interleave: boolean
   /** A META packet rides in every Nth frame (counter % metaEvery === 0). */
   metaEvery: number
@@ -24,19 +27,19 @@ export interface Profile {
 export const PROFILES: Profile[] = [
   {
     id: 0, name: 'safe', label: 'Safe', blurb: 'Bad cameras, shaky hands, dim rooms',
-    bpc: 2, grid: 48, hold: 6, packetsPerFrame: 2, parityRatio: 0.28, interleave: true, metaEvery: 3,
+    bpc: 2, grid: 48, hold: 6, packetsPerFrame: 2, parityRatio: 0.28, interleave: false, metaEvery: 3,
   },
   {
     id: 1, name: 'balanced', label: 'Balanced', blurb: 'Good default',
-    bpc: 3, grid: 64, hold: 4, packetsPerFrame: 4, parityRatio: 0.2, interleave: true, metaEvery: 3,
+    bpc: 3, grid: 64, hold: 4, packetsPerFrame: 4, parityRatio: 0.2, interleave: false, metaEvery: 3,
   },
   {
     id: 2, name: 'fast', label: 'Fast', blurb: 'Good light, steady hands, decent camera',
-    bpc: 4, grid: 80, hold: 3, packetsPerFrame: 9, parityRatio: 0.2, interleave: true, metaEvery: 3,
+    bpc: 4, grid: 80, hold: 3, packetsPerFrame: 9, parityRatio: 0.2, interleave: false, metaEvery: 3,
   },
   {
     id: 3, name: 'max', label: 'Max', blurb: 'Experimental, best case only',
-    bpc: 4, grid: 96, hold: 2, packetsPerFrame: 14, parityRatio: 0.2, interleave: true, metaEvery: 3,
+    bpc: 4, grid: 96, hold: 2, packetsPerFrame: 14, parityRatio: 0.2, interleave: false, metaEvery: 3,
   },
 ]
 
