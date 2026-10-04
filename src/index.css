@@ -1,0 +1,54 @@
+:root {
+  --bg: #0b0b0f;
+  --fg: #f2f2f7;
+  --muted: #8e8e99;
+  --card: #17171e;
+  --blue: #0a84ff;
+  --green: #34c759;
+  --red: #ff3b30;
+  --yellow: #ffcc00;
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); overscroll-behavior: none; }
+h1, h2, p { margin: 0; }
+
+.screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: max(24px, env(safe-area-inset-top)) 20px max(24px, env(safe-area-inset-bottom));
+}
+.home { justify-content: space-between; }
+header { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-top: 8vh; text-align: center; }
+header h1 { font-size: 44px; letter-spacing: -1px; }
+.tagline { color: var(--muted); font-size: 17px; }
+.logo { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 72px; height: 72px; }
+.logo i { border-radius: 6px; }
+.logo i:nth-child(1) { background: var(--blue); }
+.logo i:nth-child(2) { background: var(--green); }
+.logo i:nth-child(3) { background: var(--red); }
+.logo i:nth-child(4) { background: var(--yellow); }
+
+.actions { display: flex; flex-direction: column; gap: 14px; }
+.big {
+  font: inherit; font-size: 20px; font-weight: 600; color: var(--fg);
+  background: var(--card); border: 0; border-radius: 20px; padding: 26px; width: 100%;
+}
+.big:active { transform: scale(0.98); }
+.big.send { background: var(--blue); }
+.big.receive { background: var(--green); color: #04210d; }
+
+footer { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.muted { color: var(--muted); font-size: 14px; line-height: 1.4; }
+.row { display: flex; align-items: center; gap: 14px; }
+.badge { font-size: 12px; color: var(--green); border: 1px solid var(--green); border-radius: 999px; padding: 3px 10px; }
+.link, .back { font: inherit; font-size: 15px; color: var(--blue); background: none; border: 0; padding: 4px; align-self: flex-start; }
+
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: flex-end; }
+.sheet { background: var(--card); width: 100%; border-radius: 24px 24px 0 0; padding: 24px 20px max(24px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 16px; }
+.sheet ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 10px; line-height: 1.4; }
+.sheet .big { background: var(--bg); padding: 16px; font-size: 17px; }
